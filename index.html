@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>智慧雲端備忘錄</title>
+    <!-- 動態生成 PWA Manifest 的佔位符 -->
+    <link id="pwa-manifest" rel="manifest" href="">
+    <meta name="theme-color" content="#facc15">
+    
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Quill.js 富文本編輯器 -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <!-- 引入 Lucide 圖標 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        apple: {
+                            yellow: '#facc15',
+                            bg: '#f9f9f9',
+                            sidebar: '#f3f4f6',
+                            text: '#1c1c1e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .ql-container { font-size: 16px; border: none !important; }
+        .ql-toolbar { border: none !important; border-bottom: 1px solid #e5e7eb !important; background: white; position: sticky; top: 0; z-index: 10; }
+        .ql-editor { min-height: calc(100vh - 150px); padding: 1.5rem; }
+        /* 隱藏滾動條但保留功能 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .note-active { background-color: #e2e8f0; border-left: 4px solid #facc15; }
+    </style>
+</head>
+<body class="bg-apple-bg text-apple-text overflow-hidden h-screen flex">
+
+    <!-- 左側邊欄：筆記列表 -->
+    <aside id="sidebar" class="w-full md:w-80 bg-apple-sidebar border-r border-gray-200 flex flex-col h-full transition-transform duration-300">
+        <!-- 頂部工具列 -->
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-apple-sidebar z-20">
+            <h1 class="text-xl font-bold">備忘錄</h1>
+            <div class="flex space-x-2">
+                <button onclick="ui.openSettings()" class="p-2 text-gray-500 hover:text-black rounded-full hover:bg-gray-200 transition" title="設定 GitHub 同步">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+                <button onclick="githubSync.manualSync()" id="sync-btn" class="p-2 text-gray-500 hover:text-black rounded-full hover:bg-gray-200 transition" title="立即同步">
+                    <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                </button>
+                <button onclick="noteManager.createNewNote()" class="p-2 text-apple-yellow hover:text-yellow-600 rounded-full hover:bg-yellow-50 transition" title="新增筆記">
+                    <i data-lucide="edit" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+        <!-- 列表區域 -->
+        <div id="note-list" class="flex-1 overflow-y-auto">
+            <!-- 筆記項目將由 JS 動態生成 -->
+        </div>
+    </aside>
+
+    <!-- 右側：編輯區域 -->
+    <main id="editor-container" class="hidden md:flex flex-1 flex-col h-full bg-white relative">
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center md:hidden">
+            <button onclick="ui.showSidebar()" class="text-apple-yellow flex items-center">
+                <i data-lucide="chevron-left" class="w-5 h-5 mr-1"></i> 返回列表
+            </button>
+            <button onclick="noteManager.deleteCurrentNote()" class="text-red-500 p-2">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="px-6 py-4 flex justify-between items-center absolute top-0 right-0 z-20 hidden md:flex">
+             <button onclick="noteManager.deleteCurrentNote()" class="text-gray-400 hover:text-red-500 p-2 transition" title="刪除筆記">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <input type="text" id="note-title" placeholder="請輸入標題..." class="w-full text-3xl font-bold px-6 pt-6 pb-2 outline-none bg-transparent placeholder-gray-300">
+        <div class="flex-1 overflow-y-auto relative">
+            <div id="quill-editor"></div>
+        </div>
+        <div id="save-status" class="absolute bottom-4 right-4 text-xs text-gray-400 bg-white px-2 py-1 rounded shadow opacity-0 transition-opacity">已儲存</div>
+    </main>
+
+    <!-- 設定 Modal -->
+    <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-96 p-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i data-lucide="github" class="w-6 h-6 mr-2"></i> GitHub 同步設定
+            </h2>
+            <p class="text-sm text-gray-500 mb-4">設定您的 GitHub 資訊以啟用跨平台自動雲端同步功能。</p>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">GitHub 帳號 (Username)</label>
+                    <input type="text" id="set-username" class="w-full p-2 border border-gray-300 rounded focus:ring-apple-yellow focus:border-apple-yellow outline-none" placeholder="例如: octocat">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">儲存庫名稱 (Repository)</label>
+                    <input type="text" id="set-repo" class="w-full p-2 border border-gray-300 rounded focus:ring-apple-yellow focus:border-apple-yellow outline-none" placeholder="例如: my-notes">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Personal Access Token (PAT)</label>
+                    <input type="password" id="set-token" class="w-full p-2 border border-gray-300 rounded focus:ring-apple-yellow focus:border-apple-yellow outline-none" placeholder="ghp_xxxxxxxxxxxxxxx">
+                    <p class="text-xs text-gray-400 mt-1">需具備 `repo` 權限。此 Token 僅儲存於本機瀏覽器中。</p>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button onclick="ui.closeSettings()" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition">取消</button>
+                <button onclick="githubSync.saveSettings()" class="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition">儲存並同步</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none z-50 flex items-center">
+        <i id="toast-icon" data-lucide="info" class="w-4 h-4 mr-2"></i>
+        <span id="toast-msg"></span>
+    </div>
+
+    <script>
+        // --- 核心工具：UTF8 與 Base64 轉換 (解決中文亂碼問題) ---
+        const b64Tools = {
+            encode: (str) => window.btoa(unescape(encodeURIComponent(str))),
+            decode: (str) => decodeURIComponent(escape(window.atob(str)))
+        };
+
+        // --- 核心邏輯：IndexedDB 本地資料庫 ---
+        const db = {
+            name: 'PwaNotesDB',
+            version: 1,
+            instance: null,
+
+            init: function() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.name, this.version);
+                    request.onerror = (event) => reject("資料庫開啟失敗");
+                    request.onsuccess = (event) => {
+                        this.instance = event.target.result;
+                        resolve();
+                    };
+                    request.onupgradeneeded = (event) => {
+                        const database = event.target.result;
+                        if (!database.objectStoreNames.contains('notes')) {
+                            // 使用 id 作為主鍵
+                            database.createObjectStore('notes', { keyPath: 'id' });
+                        }
+                    };
+                });
+            },
+            
+            saveNotes: function(notesArray) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.instance.transaction(['notes'], 'readwrite');
+                    const store = transaction.objectStore('notes');
+                    // 清空現有資料再寫入（確保與雲端一致）
+                    store.clear().onsuccess = () => {
+                        let completed = 0;
+                        if(notesArray.length === 0) resolve();
+                        notesArray.forEach(note => {
+                            const request = store.add(note);
+                            request.onsuccess = () => {
+                                completed++;
+                                if(completed === notesArray.length) resolve();
+                            };
+                            request.onerror = () => reject("儲存筆記失敗");
+                        });
+                    };
+                });
+            },
+
+            getNotes: function() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.instance.transaction(['notes'], 'readonly');
+                    const store = transaction.objectStore('notes');
+                    const request = store.getAll();
+                    request.onsuccess = () => {
+                        // 依據時間戳記排序 (最新在上)
+                        const notes = request.result.sort((a, b) => b.updatedAt - a.updatedAt);
+                        resolve(notes);
+                    };
+                    request.onerror = () => reject("讀取筆記失敗");
+                });
+            }
+        };
+
+        // --- GitHub API 雲端同步模組 ---
+        const githubSync = {
+            settings: {
+                username: localStorage.getItem('gh_username') || '',
+                repo: localStorage.getItem('gh_repo') || '',
+                token: localStorage.getItem('gh_token') || '',
+                filePath: 'notes_data.json',
+                fileSha: localStorage.getItem('gh_file_sha') || null // 記錄遠端檔案版本號
+            },
+
+            saveSettings: function() {
+                this.settings.username = document.getElementById('set-username').value.trim();
+                this.settings.repo = document.getElementById('set-repo').value.trim();
+                this.settings.token = document.getElementById('set-token').value.trim();
+                
+                localStorage.setItem('gh_username', this.settings.username);
+                localStorage.setItem('gh_repo', this.settings.repo);
+                localStorage.setItem('gh_token', this.settings.token);
+                
+                ui.closeSettings();
+                this.manualSync();
+            },
+
+            isReady: function() {
+                return this.settings.username && this.settings.repo && this.settings.token;
+            },
+
+            getApiUrl: function() {
+                return `https://api.github.com/repos/${this.settings.username}/${this.settings.repo}/contents/${this.settings.filePath}`;
+            },
+
+            getHeaders: function() {
+                return {
+                    'Authorization': `token ${this.settings.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                };
+            },
+
+            // 執行雙向同步
+            manualSync: async function() {
+                if (!this.isReady()) {
+                    ui.showToast('請先設定 GitHub 資訊', 'settings');
+                    ui.openSettings();
+                    return;
+                }
+
+                ui.toggleSyncIcon(true);
+                ui.showToast('正在與 GitHub 同步中...', 'refresh-cw');
+
+                try {
+                    // 1. 嘗試從 GitHub 抓取最新資料
+                    const response = await fetch(this.getApiUrl(), { headers: this.getHeaders() });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.settings.fileSha = data.sha;
+                        localStorage.setItem('gh_file_sha', data.sha);
+                        
+                        const decodedContent = b64Tools.decode(data.content);
+                        const remoteNotes = JSON.parse(decodedContent);
+                        
+                        // 簡單邏輯：以 GitHub 上的資料為主更新本地
+                        // (進階實作可加入時間戳記比對合併機制)
+                        await db.saveNotes(remoteNotes);
+                        noteManager.notes = remoteNotes;
+                        ui.renderNoteList();
+                        ui.showToast('同步成功：已載入雲端資料', 'check-circle');
+                        
+                        // 如果目前有選中的筆記，重新載入內容
+                        if(noteManager.currentNoteId) {
+                            noteManager.selectNote(noteManager.currentNoteId);
+                        }
+
+                    } else if (response.status === 404) {
+                        // 檔案不存在，將本地資料 Push 上去建立新檔案
+                        ui.showToast('建立雲端備份庫...', 'upload');
+                        await this.pushToGitHub();
+                    } else {
+                        throw new Error(`API 錯誤: ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    ui.showToast('同步失敗，請檢查設定或網路', 'alert-circle');
+                } finally {
+                    ui.toggleSyncIcon(false);
+                }
+            },
+
+            // 將本地資料推送到 GitHub
+            pushToGitHub: async function() {
+                if (!this.isReady()) return;
+                
+                try {
+                    const notes = await db.getNotes();
+                    const contentJson = JSON.stringify(notes);
+                    const encodedContent = b64Tools.encode(contentJson);
+                    
+                    const payload = {
+                        message: `自動同步備忘錄: ${new Date().toLocaleString()}`,
+                        content: encodedContent
+                    };
+                    
+                    if (this.settings.fileSha) {
+                        payload.sha = this.settings.fileSha;
+                    }
+
+                    const response = await fetch(this.getApiUrl(), {
+                        method: 'PUT',
+                        headers: this.getHeaders(),
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.settings.fileSha = data.content.sha;
+                        localStorage.setItem('gh_file_sha', data.content.sha);
+                        console.log("GitHub 備份更新成功");
+                    } else {
+                        // 如果發生衝突 (sha 不符)，可能需要先 pull
+                        console.error("上傳至 GitHub 失敗", await response.text());
+                    }
+                } catch (error) {
+                    console.error("Push 執行異常", error);
+                }
+            }
+        };
+
+        // --- 應用程式與筆記管理邏輯 ---
+        const noteManager = {
+            notes: [],
+            currentNoteId: null,
+            quill: null,
+            autoSaveTimer: null,
+            syncTimer: null,
+
+            init: async function() {
+                // 初始化 Quill 編輯器
+                this.quill = new Quill('#quill-editor', {
+                    theme: 'snow',
+                    placeholder: '開始記錄靈感...',
+                    modules: {
+                        toolbar: [
+                            [{ 'header': [1, 2, 3, false] }],
+                            ['bold', 'italic', 'underline', 'strike'],
+                            [{ 'color': [] }, { 'background': [] }],
+                            [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+                            ['link', 'image'],
+                            ['clean']
+                        ]
+                    }
+                });
+
+                // 監聽編輯器內容變化 (自動儲存)
+                this.quill.on('text-change', () => this.triggerAutoSave());
+                document.getElementById('note-title').addEventListener('input', () => this.triggerAutoSave());
+
+                // 初始化資料庫並讀取資料
+                await db.init();
+                this.notes = await db.getNotes();
+                ui.renderNoteList();
+
+                if (this.notes.length > 0) {
+                    this.selectNote(this.notes[0].id);
+                } else {
+                    ui.showSidebar(); // 行動版預設顯示列表
+                }
+            },
+
+            createNewNote: function() {
+                const newNote = {
+                    id: Date.now().toString(),
+                    title: '',
+                    content: '', // Quill 的 Delta 或 HTML，這裡存 HTML
+                    preview: '無額外文字',
+                    updatedAt: Date.now()
+                };
+                this.notes.unshift(newNote); // 放入列表最前方
+                this.selectNote(newNote.id);
+                this.triggerAutoSave();
+            },
+
+            selectNote: function(id) {
+                this.currentNoteId = id;
+                const note = this.notes.find(n => n.id === id);
+                
+                if (note) {
+                    document.getElementById('note-title').value = note.title;
+                    // 使用 pasteHTML 方式載入確保格式正確
+                    this.quill.clipboard.dangerouslyPasteHTML(note.content);
+                    
+                    ui.renderNoteList(); // 更新列表選中狀態
+                    ui.showEditor();     // 行動版切換至編輯器
+                }
+            },
+
+            deleteCurrentNote: function() {
+                if (!this.currentNoteId) return;
+                if (!confirm("確定要刪除這則備忘錄嗎？")) return;
+
+                this.notes = this.notes.filter(n => n.id !== this.currentNoteId);
+                this.currentNoteId = null;
+                
+                document.getElementById('note-title').value = '';
+                this.quill.setText('');
+                
+                this.triggerAutoSave();
+                
+                if (this.notes.length > 0) {
+                    this.selectNote(this.notes[0].id);
+                } else {
+                    ui.showSidebar();
+                }
+            },
+
+            // 觸發自動儲存機制 (防抖動 Debounce)
+            triggerAutoSave: function() {
+                if (!this.currentNoteId) return;
+
+                clearTimeout(this.autoSaveTimer);
+                this.autoSaveTimer = setTimeout(async () => {
+                    const note = this.notes.find(n => n.id === this.currentNoteId);
+                    if (note) {
+                        note.title = document.getElementById('note-title').value;
+                        note.content = this.quill.root.innerHTML; // 取得 HTML 格式
+                        note.preview = this.quill.getText().substring(0, 50).replace(/\n/g, ' ') || '無額外文字';
+                        note.updatedAt = Date.now();
+
+                        // 重新排序
+                        this.notes.sort((a, b) => b.updatedAt - a.updatedAt);
+                        
+                        // 1. 儲存至本地 IndexedDB
+                        await db.saveNotes(this.notes);
+                        ui.renderNoteList();
+                        ui.showSaveStatus();
+
+                        // 2. 觸發背景延遲同步至 GitHub (避免頻繁呼叫 API)
+                        this.triggerBackgroundSync();
+                    }
+                }, 1000); // 停止打字 1 秒後寫入本地
+            },
+
+            triggerBackgroundSync: function() {
+                if (!githubSync.isReady()) return;
+                
+                clearTimeout(this.syncTimer);
+                // 本地儲存後，若 5 秒內無新動作，則背景推送到雲端
+                this.syncTimer = setTimeout(() => {
+                    console.log("觸發背景雲端同步...");
+                    githubSync.pushToGitHub();
+                }, 5000); 
+            }
+        };
+
+        // --- UI 控制與渲染邏輯 ---
+        const ui = {
+            formatDate: function(timestamp) {
+                const d = new Date(timestamp);
+                const now = new Date();
+                if (d.toDateString() === now.toDateString()) {
+                    return d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+                }
+                return d.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
+            },
+
+            renderNoteList: function() {
+                const listEl = document.getElementById('note-list');
+                listEl.innerHTML = '';
+
+                if (noteManager.notes.length === 0) {
+                    listEl.innerHTML = '<div class="p-6 text-center text-gray-400 text-sm">點擊右上角新增第一則筆記</div>';
+                    return;
+                }
+
+                noteManager.notes.forEach(note => {
+                    const isActive = note.id === noteManager.currentNoteId;
+                    const div = document.createElement('div');
+                    div.className = `p-4 border-b border-gray-100 cursor-pointer transition ${isActive ? 'note-active' : 'hover:bg-gray-100'}`;
+                    div.onclick = () => noteManager.selectNote(note.id);
+                    
+                    const displayTitle = note.title.trim() || '新增備忘錄';
+                    
+                    div.innerHTML = `
+                        <div class="font-bold text-md text-gray-800 truncate mb-1">${displayTitle}</div>
+                        <div class="flex items-center text-xs text-gray-500">
+                            <span class="mr-2 shrink-0">${this.formatDate(note.updatedAt)}</span>
+                            <span class="truncate">${note.preview}</span>
+                        </div>
+                    `;
+                    listEl.appendChild(div);
+                });
+            },
+
+            showSidebar: function() {
+                document.getElementById('sidebar').classList.remove('hidden');
+                document.getElementById('editor-container').classList.add('hidden');
+                document.getElementById('editor-container').classList.remove('flex');
+            },
+
+            showEditor: function() {
+                if (window.innerWidth < 768) { // md 斷點
+                    document.getElementById('sidebar').classList.add('hidden');
+                    document.getElementById('editor-container').classList.remove('hidden');
+                    document.getElementById('editor-container').classList.add('flex');
+                }
+            },
+
+            openSettings: function() {
+                document.getElementById('set-username').value = githubSync.settings.username;
+                document.getElementById('set-repo').value = githubSync.settings.repo;
+                document.getElementById('set-token').value = githubSync.settings.token;
+                document.getElementById('settings-modal').classList.remove('hidden');
+                document.getElementById('settings-modal').classList.add('flex');
+            },
+
+            closeSettings: function() {
+                document.getElementById('settings-modal').classList.add('hidden');
+                document.getElementById('settings-modal').classList.remove('flex');
+            },
+
+            showToast: function(msg, iconName = 'info') {
+                const toast = document.getElementById('toast');
+                document.getElementById('toast-msg').textContent = msg;
+                document.getElementById('toast-icon').setAttribute('data-lucide', iconName);
+                lucide.createIcons();
+                
+                toast.classList.remove('opacity-0');
+                setTimeout(() => toast.classList.add('opacity-0'), 3000);
+            },
+
+            showSaveStatus: function() {
+                const status = document.getElementById('save-status');
+                status.classList.remove('opacity-0');
+                setTimeout(() => status.classList.add('opacity-0'), 2000);
+            },
+
+            toggleSyncIcon: function(isSyncing) {
+                const btn = document.getElementById('sync-btn');
+                if (isSyncing) {
+                    btn.classList.add('animate-spin', 'text-blue-500');
+                } else {
+                    btn.classList.remove('animate-spin', 'text-blue-500');
+                }
+            }
+        };
+
+        // --- PWA 基礎建設 (動態注入 Manifest) ---
+        function initPWA() {
+            const manifestData = {
+                "name": "雲端備忘錄",
+                "short_name": "備忘錄",
+                "start_url": ".",
+                "display": "standalone",
+                "background_color": "#f9f9f9",
+                "theme_color": "#facc15",
+                "icons": [{
+                    "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmFjYzE1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDIwYy0uNyAwLTEuMy0uMy0xLjctLjdMLTMgMTJjLS45LS45LS45LTIuNCAwLTMuM2w3LjMtNy4zYy45LS45IDIuNC0uOSAzLjMgMGw3LjMgNy4zYy45LjkuOSAyLjQgMCAzLjNMMTMuNyAxOS4zYy0uNC40LTEgLjctMS43Ljd6Ii8+PC9zdmc+",
+                    "sizes": "192x192",
+                    "type": "image/svg+xml"
+                }]
+            };
+            const blob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+            const manifestURL = URL.createObjectURL(blob);
+            document.querySelector('#pwa-manifest').setAttribute('href', manifestURL);
+        }
+
+        // --- 應用程式啟動 ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initPWA();
+            lucide.createIcons();
+            noteManager.init();
+        });
+
+    </script>
+</body>
+</html>
