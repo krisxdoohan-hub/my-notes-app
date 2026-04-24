@@ -70,9 +70,9 @@
 
         <!-- 版本資訊與更新日誌區塊 -->
         <div class="mt-auto p-3 border-t border-gray-200 text-center">
-            <div class="inline-block bg-white px-2 py-1 rounded-full text-xs font-bold text-gray-600 shadow-sm mb-1">v1.4.0</div>
+            <div class="inline-block bg-white px-2 py-1 rounded-full text-xs font-bold text-gray-600 shadow-sm mb-1">v1.5.0</div>
             <div class="text-[11px] text-gray-600 leading-tight">
-                ✨ 更新：新增單篇筆記「密碼上鎖」與「智慧解鎖」隱私防護功能。
+                ✨ 更新：導入銀行級設定面板遮蔽機制，全面升級個人資訊隱私防護。
             </div>
         </div>
     </aside>
@@ -118,38 +118,58 @@
         <div id="save-status" class="absolute bottom-4 right-4 text-xs text-green-700 bg-green-100 px-2 py-1 rounded shadow opacity-0 transition-opacity font-bold">已儲存</div>
     </main>
 
-    <!-- 設定 Modal -->
+    <!-- 設定 Modal (加入密碼遮蔽與眼睛切換按鈕) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-96 p-6">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-[400px] p-6">
             <h2 class="text-xl font-bold mb-4 flex items-center">
                 <i data-lucide="github" class="w-6 h-6 mr-2"></i> GitHub 同步設定
             </h2>
-            <p class="text-sm text-gray-500 mb-4">設定您的 GitHub 資訊以啟用跨平台自動雲端同步功能。</p>
+            <p class="text-sm text-gray-500 mb-5">設定您的 GitHub 資訊以啟用跨平台自動雲端同步功能。</p>
             
-            <div class="space-y-3">
+            <div class="space-y-4">
+                <!-- 帳號輸入框 -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">GitHub 帳號 (Username)</label>
-                    <input type="text" id="set-username" class="w-full p-2 border border-gray-300 rounded outline-none" placeholder="例如: krisxdoohan-hub">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">GitHub 帳號 (Username)</label>
+                    <div class="relative">
+                        <input type="password" id="set-username" class="w-full p-3 pr-12 border border-gray-300 rounded outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 transition" placeholder="輸入 GitHub 帳號">
+                        <button id="btn-eye-username" onclick="ui.toggleVisibility('set-username', 'btn-eye-username')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition">
+                            <i data-lucide="eye-off" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                 </div>
+                
+                <!-- 儲存庫輸入框 -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">儲存庫名稱 (Repository)</label>
-                    <input type="text" id="set-repo" class="w-full p-2 border border-gray-300 rounded outline-none" placeholder="例如: pwa-data-center">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">儲存庫名稱 (Repository)</label>
+                    <div class="relative">
+                        <input type="password" id="set-repo" class="w-full p-3 pr-12 border border-gray-300 rounded outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 transition" placeholder="輸入私有儲存庫名稱">
+                        <button id="btn-eye-repo" onclick="ui.toggleVisibility('set-repo', 'btn-eye-repo')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition">
+                            <i data-lucide="eye-off" class="w-5 h-5"></i>
+                        </button>
+                    </div>
                 </div>
+
+                <!-- 金鑰輸入框 -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Personal Access Token (PAT)</label>
-                    <input type="password" id="set-token" class="w-full p-2 border border-gray-300 rounded outline-none" placeholder="ghp_xxxxxxxxxxxxxxx">
-                    <p class="text-xs text-gray-400 mt-1">需具備 `repo` 權限。此 Token 僅儲存於本機瀏覽器中。</p>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Personal Access Token (PAT)</label>
+                    <div class="relative">
+                        <input type="password" id="set-token" class="w-full p-3 pr-12 border border-gray-300 rounded outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 transition" placeholder="ghp_xxxxxxxxxxxxxxx">
+                        <button id="btn-eye-token" onclick="ui.toggleVisibility('set-token', 'btn-eye-token')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition">
+                            <i data-lucide="eye-off" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-2 leading-tight">需具備 `repo` 權限。此 Token 僅儲存於本機瀏覽器中，不會上傳至任何第三方伺服器。</p>
                 </div>
             </div>
 
-            <div class="mt-6 flex justify-end space-x-3">
-                <button onclick="ui.closeSettings()" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition font-bold">取消</button>
-                <button onclick="githubSync.saveSettings()" class="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition font-bold">儲存並同步</button>
+            <div class="mt-8 flex justify-end space-x-3">
+                <button onclick="ui.closeSettings()" class="px-5 py-2.5 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition font-bold">取消</button>
+                <button onclick="githubSync.saveSettings()" class="px-5 py-2.5 bg-black text-white rounded hover:bg-gray-800 transition font-bold shadow-md">儲存並同步</button>
             </div>
         </div>
     </div>
 
-    <!-- 新增：設定密碼 Modal -->
+    <!-- 設定密碼 Modal -->
     <div id="set-password-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-80 p-6 text-center">
             <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -165,7 +185,7 @@
         </div>
     </div>
 
-    <!-- 新增：解鎖密碼 Modal -->
+    <!-- 解鎖密碼 Modal -->
     <div id="unlock-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-80 p-6 text-center">
             <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -177,6 +197,21 @@
             <div class="flex justify-center space-x-3">
                 <button onclick="ui.closeUnlock()" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition font-bold w-full">取消</button>
                 <button onclick="noteManager.confirmUnlock()" class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition font-bold w-full">解鎖</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自訂確認對話框 Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-80 p-6 text-center">
+            <div id="confirm-icon-bg" class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i id="confirm-icon" data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h2 id="confirm-title" class="text-xl font-bold mb-2">確認</h2>
+            <p id="confirm-desc" class="text-sm text-gray-500 mb-6">您確定要執行此操作嗎？</p>
+            <div class="flex justify-center space-x-3">
+                <button onclick="ui.closeConfirm()" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition font-bold w-full">取消</button>
+                <button id="confirm-submit-btn" class="px-4 py-2 text-white rounded transition font-bold w-full">確定</button>
             </div>
         </div>
     </div>
@@ -461,38 +496,59 @@
             },
 
             deleteCurrentNote: function() {
-                if (!this.currentNoteId) return;
-                if (!confirm("確定要刪除這則備忘錄嗎？")) return;
-
-                this.notes = this.notes.filter(n => n.id !== this.currentNoteId);
-                this.currentNoteId = null;
-                
-                document.getElementById('note-title').value = '';
-                this.quill.setText('');
-                
-                this.triggerAutoSave();
-                
-                if (this.notes.length > 0) {
-                    this.selectNote(this.notes[0].id);
-                } else {
-                    ui.showSidebar();
+                if (!this.currentNoteId) {
+                    ui.showToast('請先選擇要刪除的筆記', 'alert-circle');
+                    return;
                 }
+
+                ui.showConfirm(
+                    '刪除筆記',
+                    '確定要刪除這則備忘錄嗎？此動作無法復原。',
+                    'trash-2',
+                    'bg-red-100 text-red-600',
+                    'bg-red-500 hover:bg-red-600',
+                    () => {
+                        this.notes = this.notes.filter(n => n.id !== this.currentNoteId);
+                        this.currentNoteId = null;
+                        
+                        document.getElementById('note-title').value = '';
+                        this.quill.setText('');
+                        
+                        this.triggerAutoSave();
+                        
+                        if (this.notes.length > 0) {
+                            this.selectNote(this.notes[0].id);
+                        } else {
+                            ui.showSidebar();
+                        }
+                    }
+                );
             },
 
             // 切換鎖定狀態
             toggleLock: function() {
-                if (!this.currentNoteId) return;
+                if (!this.currentNoteId) {
+                    ui.showToast('請先新增一則筆記才能設定密碼', 'alert-circle');
+                    return;
+                }
                 const note = this.notes.find(n => n.id === this.currentNoteId);
                 
                 if (note.isLocked) {
-                    if (confirm('確定要解除此筆記的密碼鎖定嗎？')) {
-                        note.isLocked = false;
-                        note.lockPassword = '';
-                        this.triggerAutoSave();
-                        ui.updateLockIcon(false);
-                        ui.renderNoteList();
-                        ui.showToast('🔓 筆記已解除鎖定', 'unlock');
-                    }
+                    ui.showConfirm(
+                        '解除鎖定',
+                        '確定要永久解除此筆記的密碼鎖定嗎？',
+                        'unlock',
+                        'bg-blue-100 text-blue-600',
+                        'bg-blue-600 hover:bg-blue-700',
+                        () => {
+                            note.isLocked = false;
+                            note.lockPassword = '';
+                            this.triggerAutoSave();
+                            ui.updateLockIcon(false);
+                            ui.renderNoteList();
+                            ui.showToast('🔓 筆記已解除鎖定', 'unlock');
+                        }
+                    );
                 } else {
                     document.getElementById('new-lock-password').value = '';
                     document.getElementById('set-password-modal').classList.remove('hidden');
@@ -662,12 +718,42 @@
                 }
             },
 
+            // 升級：打開設定時強制套用密碼遮蔽狀態
             openSettings: function() {
                 document.getElementById('set-username').value = githubSync.settings.username;
                 document.getElementById('set-repo').value = githubSync.settings.repo;
                 document.getElementById('set-token').value = githubSync.settings.token;
+                
+                // 強制重置三個欄位為隱藏模式
+                const fields = [
+                    { inputId: 'set-username', btnId: 'btn-eye-username' },
+                    { inputId: 'set-repo', btnId: 'btn-eye-repo' },
+                    { inputId: 'set-token', btnId: 'btn-eye-token' }
+                ];
+                
+                fields.forEach(field => {
+                    document.getElementById(field.inputId).type = 'password';
+                    document.getElementById(field.btnId).innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+                });
+                lucide.createIcons();
+
                 document.getElementById('settings-modal').classList.remove('hidden');
                 document.getElementById('settings-modal').classList.add('flex');
+            },
+
+            // 新增：切換顯示/隱藏敏感資訊
+            toggleVisibility: function(inputId, btnId) {
+                const input = document.getElementById(inputId);
+                const btn = document.getElementById(btnId);
+                
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    btn.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
+                } else {
+                    input.type = 'password';
+                    btn.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+                }
+                lucide.createIcons();
             },
 
             closeSettings: function() {
@@ -707,7 +793,6 @@
                 noteManager.pendingUnlockId = null;
             },
 
-            // 新增：呼叫自訂確認視窗的底層邏輯
             showConfirm: function(title, desc, iconName, iconBgClass, btnClass, onConfirmCallback) {
                 document.getElementById('confirm-title').textContent = title;
                 document.getElementById('confirm-desc').textContent = desc;
@@ -722,7 +807,6 @@
                 const submitBtn = document.getElementById('confirm-submit-btn');
                 submitBtn.className = `px-4 py-2 text-white rounded transition font-bold w-full ${btnClass}`;
                 
-                // 綁定確認後的執行事件
                 submitBtn.onclick = () => {
                     ui.closeConfirm();
                     if(onConfirmCallback) onConfirmCallback();
@@ -770,7 +854,6 @@
             lucide.createIcons();
             noteManager.init();
             
-            // 註冊實體 Service Worker 以啟動 Android WebAPK 封裝機制
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('sw.js')
                     .then(() => console.log("實體 Service Worker 註冊成功"))
