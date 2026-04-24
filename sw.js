@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pwa-notes-cache-v1';
+const CACHE_NAME = 'pwa-notes-cache-v1.4.0';
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
