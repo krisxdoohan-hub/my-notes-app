@@ -1,0 +1,20 @@
+{
+    "name": "雲端備忘錄",
+    "short_name": "備忘錄",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#f0f8ed",
+    "theme_color": "#e2efda",
+    "icons": [
+        {
+            "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmFjYzE1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDIwYy0uNyAwLTEuMy0uMy0xLjctLjdMLTMgMTJjLS45LS45LS45LTIuNCAwLTMuM2w3LjMtNy4zYy45LS45IDIuNC0uOSAzLjMgMGw3LjMgNy4zYy45LjkuOSAyLjQgMCAzLjNMMTMuNyAxOS4zYy0uNC40LTEgLjctMS43Ljd6Ii8+PC9zdmc+",
+            "sizes": "192x192",
+            "type": "image/svg+xml"
+        },
+        {
+            "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmFjYzE1IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTEyIDIwYy0uNyAwLTEuMy0uMy0xLjctLjdMLTMgMTJjLS45LS45LS45LTIuNCAwLTMuM2w3LjMtNy4zYy45LS45IDIuNC0uOSAzLjMgMGw3LjMgNy4zYy45LjkuOSAyLjQgMCAzLjNMMTMuNyAxOS4zYy0uNC40LTEgLjctMS43Ljd6Ii8+PC9zdmc+",
+            "sizes": "512x512",
+            "type": "image/svg+xml"
+        }
+    ]
+}
