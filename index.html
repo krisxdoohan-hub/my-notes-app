@@ -28,6 +28,9 @@
                             sidebar: '#e2efda',  // 綠色, 輔色6, 較淺80% (側邊欄)
                             text: '#1c1c1e'
                         }
+                    },
+                    screens: {
+                        'xs': '320px', // 新增：針對極小手機的斷點
                     }
                 }
             }
@@ -36,215 +39,221 @@
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .ql-container { font-size: 16px; border: none !important; }
-        .ql-toolbar { border: none !important; border-bottom: 1px solid #e5e7eb !important; background: transparent; position: sticky; top: 0; z-index: 10; }
-        .ql-editor { min-height: calc(100vh - 150px); padding: 1.5rem; }
+        /* 升級：確保工具列在極窄螢幕上會精準折行且不影響高度感知 */
+        .ql-toolbar { border: none !important; border-bottom: 1px solid #e5e7eb !important; background: transparent; position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; gap: 2px; padding: 8px !important; }
+        .ql-editor { min-height: calc(100vh - 160px); padding: 1.25rem; word-break: break-word; }
+        .ql-editor img { max-width: 100%; height: auto; border-radius: 8px; } 
         /* 隱藏滾動條但保留功能 */
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .note-active { background-color: rgba(255, 255, 255, 0.5); border-left: 4px solid #facc15; }
+        
+        /* 防止標題輸入框在聚焦時產生額外的邊距移動 */
+        input:focus { outline: none; }
     </style>
 </head>
-<body class="bg-apple-bg text-apple-text overflow-hidden h-screen flex">
+<body class="bg-apple-bg text-apple-text overflow-hidden h-screen flex w-full max-w-[100vw] select-none">
 
-    <!-- 左側邊欄：筆記列表 -->
-    <aside id="sidebar" class="w-full md:w-80 bg-apple-sidebar border-r border-gray-200 flex flex-col h-full transition-transform duration-300">
+    <!-- 左側邊欄：筆記列表 (在手機上可隱藏) -->
+    <aside id="sidebar" class="w-full md:w-80 bg-apple-sidebar border-r border-gray-200 flex flex-col h-full transition-transform duration-300 shrink-0">
         <!-- 頂部工具列 -->
         <div class="p-4 border-b border-gray-200 flex justify-between items-center z-20">
-            <h1 class="text-xl font-bold">備忘錄</h1>
-            <div class="flex space-x-2">
-                <button onclick="ui.openSettings()" class="p-2 text-gray-500 hover:text-black rounded-full hover:bg-white/50 transition" title="設定 GitHub 同步">
+            <h1 class="text-xl font-bold tracking-tight">備忘錄</h1>
+            <div class="flex items-center gap-1">
+                <button onclick="ui.openSettings()" class="p-2 text-gray-500 hover:text-black rounded-full hover:bg-white/60 transition" title="同步設定">
                     <i data-lucide="settings" class="w-5 h-5"></i>
                 </button>
-                <button onclick="githubSync.manualSync()" id="sync-btn" class="p-2 text-gray-500 hover:text-black rounded-full hover:bg-white/50 transition" title="立即同步">
+                <button onclick="githubSync.manualSync()" id="sync-btn" class="p-2 text-gray-500 hover:text-black rounded-full hover:bg-white/60 transition" title="立即同步">
                     <i data-lucide="refresh-cw" class="w-5 h-5"></i>
                 </button>
-                <button onclick="noteManager.createNewNote()" class="p-2 text-yellow-600 hover:text-yellow-700 rounded-full hover:bg-white/50 transition" title="新增筆記">
-                    <i data-lucide="edit" class="w-5 h-5"></i>
+                <button onclick="noteManager.createNewNote()" class="p-2 text-yellow-600 hover:text-yellow-700 rounded-full hover:bg-white/60 transition" title="新增筆記">
+                    <i data-lucide="edit-3" class="w-5 h-5"></i>
                 </button>
             </div>
         </div>
         <!-- 列表區域 -->
         <div id="note-list" class="flex-1 overflow-y-auto">
-            <!-- 筆記項目將由 JS 動態生成 -->
+            <!-- 筆記項目由 JS 動態生成 -->
         </div>
 
-        <!-- 版本資訊與更新日誌區塊 -->
-        <div class="mt-auto p-3 border-t border-gray-200 text-center">
-            <div class="inline-block bg-white px-2 py-1 rounded-full text-xs font-bold text-gray-600 shadow-sm mb-1">v1.5.0</div>
-            <div class="text-[11px] text-gray-600 leading-tight">
-                ✨ 更新：導入銀行級設定面板遮蔽機制，全面升級個人資訊隱私防護。
+        <!-- 版本資訊 -->
+        <div class="mt-auto p-3 border-t border-gray-200 text-center select-none">
+            <div class="inline-block bg-white px-2 py-1 rounded-full text-[10px] font-extrabold text-gray-500 shadow-sm mb-1 uppercase tracking-tighter">v1.5.2</div>
+            <div class="text-[10px] text-gray-500 leading-tight">
+                全裝置極限適應版：已針對極小螢幕優化佈局。
             </div>
         </div>
     </aside>
 
     <!-- 右側：編輯區域 -->
-    <main id="editor-container" class="hidden md:flex flex-1 flex-col h-full bg-apple-bg relative">
-        <div class="p-4 border-b border-gray-200 flex justify-between items-center md:hidden">
-            <button onclick="ui.showSidebar()" class="text-apple-yellow flex items-center font-bold">
-                <i data-lucide="chevron-left" class="w-5 h-5 mr-1"></i> 返回列表
+    <main id="editor-container" class="hidden md:flex flex-1 flex-col h-full bg-apple-bg relative min-w-0 overflow-x-hidden">
+        
+        <!-- 手機版導航 (精簡版，適合 Z Flip / 小尺寸 iPhone) -->
+        <div class="w-full px-2 py-2 border-b border-gray-200 flex justify-between items-center md:hidden shrink-0 bg-apple-bg/80 backdrop-blur-md z-30">
+            <button onclick="ui.showSidebar()" class="text-apple-yellow flex items-center font-bold shrink-0 p-2">
+                <i data-lucide="chevron-left" class="w-6 h-6"></i> <span class="text-base">返回</span>
             </button>
-            <div class="flex">
-                <!-- 手機版鎖頭按鈕 -->
-                <button onclick="noteManager.toggleLock()" id="mobile-lock-btn" class="text-gray-400 hover:text-blue-500 p-2 mr-1 transition" title="鎖定/解鎖筆記">
+            <div class="flex items-center gap-0 shrink-0">
+                <button onclick="noteManager.toggleLock()" id="mobile-lock-btn" class="text-gray-400 hover:text-blue-500 p-2 transition" title="鎖定">
                     <i data-lucide="unlock" class="w-5 h-5"></i>
                 </button>
-                <button onclick="noteManager.deleteCurrentNote()" class="text-red-500 p-2">
+                <button onclick="noteManager.deleteCurrentNote()" class="text-gray-400 hover:text-red-500 p-2 transition" title="刪除">
                     <i data-lucide="trash-2" class="w-5 h-5"></i>
                 </button>
             </div>
         </div>
         
+        <!-- 電腦版操作按鈕 (Vivobook 等大螢幕) -->
         <div class="px-6 py-4 flex justify-between items-center absolute top-0 right-0 z-20 hidden md:flex">
-             <!-- 電腦版鎖頭按鈕 -->
-             <button onclick="noteManager.toggleLock()" id="desktop-lock-btn" class="text-gray-400 hover:text-blue-500 p-2 mr-2 transition" title="鎖定/解鎖筆記">
+             <button onclick="noteManager.toggleLock()" id="desktop-lock-btn" class="text-gray-400 hover:text-blue-500 p-2 mr-2 transition rounded-full hover:bg-black/5" title="鎖定/解鎖">
                 <i data-lucide="unlock" class="w-5 h-5"></i>
             </button>
-             <button onclick="noteManager.deleteCurrentNote()" class="text-gray-400 hover:text-red-500 p-2 transition" title="刪除筆記">
+             <button onclick="noteManager.deleteCurrentNote()" class="text-gray-400 hover:text-red-500 p-2 transition rounded-full hover:bg-black/5" title="刪除筆記">
                 <i data-lucide="trash-2" class="w-5 h-5"></i>
             </button>
         </div>
 
-        <!-- 標題列與手動立即儲存按鈕 -->
-        <div class="flex items-center px-6 pt-6 pb-2">
-            <button onclick="noteManager.manualImmediateSync()" class="mr-3 text-gray-400 hover:text-green-500 transition-colors p-2 rounded-full hover:bg-green-100 flex-shrink-0" title="立即儲存並上傳雲端">
-                <i data-lucide="check-circle" class="w-8 h-8"></i>
+        <!-- 標題欄：階梯式字體與彈性寬度 -->
+        <div class="flex items-center px-4 md:px-6 pt-4 md:pt-6 pb-2 w-full shrink-0 gap-2">
+            <button onclick="noteManager.manualImmediateSync()" class="text-gray-400 hover:text-green-500 transition-colors p-1 md:p-2 rounded-full hover:bg-green-100 shrink-0" title="立即同步">
+                <i data-lucide="check-circle" class="w-7 h-7 md:w-8 md:h-8"></i>
             </button>
-            <input type="text" id="note-title" placeholder="請輸入標題..." class="w-full text-3xl font-bold outline-none bg-transparent placeholder-gray-400 text-gray-800">
+            <!-- 字體大小根據螢幕寬度自動階梯縮放 -->
+            <input type="text" id="note-title" placeholder="請輸入標題..." 
+                   class="flex-1 min-w-0 text-xl xs:text-2xl md:text-3xl font-black outline-none bg-transparent placeholder-gray-400 text-gray-800 md:pr-24 truncate">
         </div>
 
-        <div class="flex-1 overflow-y-auto relative">
-            <div id="quill-editor"></div>
+        <!-- 編輯內容區 -->
+        <div class="flex-1 overflow-y-auto relative w-full flex flex-col">
+            <div id="quill-editor" class="flex-1"></div>
         </div>
-        <div id="save-status" class="absolute bottom-4 right-4 text-xs text-green-700 bg-green-100 px-2 py-1 rounded shadow opacity-0 transition-opacity font-bold">已儲存</div>
+        
+        <!-- 儲存狀態氣泡 -->
+        <div id="save-status" class="absolute bottom-6 right-6 text-[10px] text-green-700 bg-green-100/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm opacity-0 transition-opacity font-bold z-10 pointer-events-none">
+            已儲存至本地
+        </div>
     </main>
 
-    <!-- 設定 Modal (加入密碼遮蔽與眼睛切換按鈕) -->
-    <div id="settings-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-[400px] p-6">
-            <h2 class="text-xl font-bold mb-4 flex items-center">
-                <i data-lucide="github" class="w-6 h-6 mr-2"></i> GitHub 同步設定
+    <!-- GitHub 設定面板 (優化小螢幕捲動) -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/60 hidden justify-center items-center z-50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[380px] p-6 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-xl font-extrabold mb-4 flex items-center tracking-tight">
+                <i data-lucide="github" class="w-6 h-6 mr-2"></i> 同步設定
             </h2>
-            <p class="text-sm text-gray-500 mb-5">設定您的 GitHub 資訊以啟用跨平台自動雲端同步功能。</p>
             
             <div class="space-y-4">
-                <!-- 帳號輸入框 -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">GitHub 帳號 (Username)</label>
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-1 ml-1">GitHub 帳號</label>
                     <div class="relative">
-                        <input type="password" id="set-username" class="w-full p-3 pr-12 border border-gray-300 rounded outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 transition" placeholder="輸入 GitHub 帳號">
-                        <button id="btn-eye-username" onclick="ui.toggleVisibility('set-username', 'btn-eye-username')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition">
+                        <input type="password" id="set-username" class="w-full p-3 pr-12 border border-gray-200 rounded-xl outline-none focus:border-gray-400 transition text-sm" placeholder="Username">
+                        <button id="btn-eye-username" onclick="ui.toggleVisibility('set-username', 'btn-eye-username')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400">
                             <i data-lucide="eye-off" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
                 
-                <!-- 儲存庫輸入框 -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">儲存庫名稱 (Repository)</label>
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-1 ml-1">儲存庫名稱</label>
                     <div class="relative">
-                        <input type="password" id="set-repo" class="w-full p-3 pr-12 border border-gray-300 rounded outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 transition" placeholder="輸入私有儲存庫名稱">
-                        <button id="btn-eye-repo" onclick="ui.toggleVisibility('set-repo', 'btn-eye-repo')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition">
+                        <input type="password" id="set-repo" class="w-full p-3 pr-12 border border-gray-200 rounded-xl outline-none focus:border-gray-400 transition text-sm" placeholder="Repository">
+                        <button id="btn-eye-repo" onclick="ui.toggleVisibility('set-repo', 'btn-eye-repo')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400">
                             <i data-lucide="eye-off" class="w-5 h-5"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- 金鑰輸入框 -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Personal Access Token (PAT)</label>
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-1 ml-1">存取金鑰 (PAT)</label>
                     <div class="relative">
-                        <input type="password" id="set-token" class="w-full p-3 pr-12 border border-gray-300 rounded outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 transition" placeholder="ghp_xxxxxxxxxxxxxxx">
-                        <button id="btn-eye-token" onclick="ui.toggleVisibility('set-token', 'btn-eye-token')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none transition">
+                        <input type="password" id="set-token" class="w-full p-3 pr-12 border border-gray-200 rounded-xl outline-none focus:border-gray-400 transition text-sm" placeholder="ghp_xxxxxx">
+                        <button id="btn-eye-token" onclick="ui.toggleVisibility('set-token', 'btn-eye-token')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400">
                             <i data-lucide="eye-off" class="w-5 h-5"></i>
                         </button>
                     </div>
-                    <p class="text-[11px] text-gray-400 mt-2 leading-tight">需具備 `repo` 權限。此 Token 僅儲存於本機瀏覽器中，不會上傳至任何第三方伺服器。</p>
+                    <p class="text-[10px] text-gray-400 mt-2 px-1">Token 僅存於瀏覽器加密空間中，安全無虞。</p>
                 </div>
             </div>
 
-            <div class="mt-8 flex justify-end space-x-3">
-                <button onclick="ui.closeSettings()" class="px-5 py-2.5 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition font-bold">取消</button>
-                <button onclick="githubSync.saveSettings()" class="px-5 py-2.5 bg-black text-white rounded hover:bg-gray-800 transition font-bold shadow-md">儲存並同步</button>
+            <div class="mt-8 flex gap-3">
+                <button onclick="ui.closeSettings()" class="flex-1 py-3 text-gray-500 bg-gray-100 rounded-xl font-bold text-sm">取消</button>
+                <button onclick="githubSync.saveSettings()" class="flex-1 py-3 bg-black text-white rounded-xl font-bold text-sm shadow-lg">儲存同步</button>
             </div>
         </div>
     </div>
 
-    <!-- 設定密碼 Modal -->
-    <div id="set-password-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-80 p-6 text-center">
-            <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i data-lucide="lock" class="w-6 h-6"></i>
+    <!-- 密碼鎖 Modal (手機適配) -->
+    <div id="set-password-modal" class="fixed inset-0 bg-black/60 hidden justify-center items-center z-50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[320px] p-6 text-center">
+            <div class="w-14 h-14 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="lock" class="w-7 h-7"></i>
             </div>
-            <h2 class="text-xl font-bold mb-2">為筆記上鎖</h2>
-            <p class="text-sm text-gray-500 mb-4">請設定密碼，未來必須輸入此密碼才能查看內容。</p>
-            <input type="password" id="new-lock-password" class="w-full p-3 border border-gray-300 rounded outline-none text-center tracking-widest mb-4" placeholder="輸入密碼">
-            <div class="flex justify-center space-x-3">
-                <button onclick="ui.closeSetPassword()" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition font-bold w-full">取消</button>
-                <button onclick="noteManager.confirmLock()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition font-bold w-full">上鎖</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 解鎖密碼 Modal -->
-    <div id="unlock-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-80 p-6 text-center">
-            <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i data-lucide="key" class="w-6 h-6"></i>
-            </div>
-            <h2 class="text-xl font-bold mb-2">筆記已上鎖</h2>
-            <p class="text-sm text-gray-500 mb-4">請輸入密碼以解鎖內容。</p>
-            <input type="password" id="unlock-password" class="w-full p-3 border border-gray-300 rounded outline-none text-center tracking-widest mb-4" placeholder="輸入密碼">
-            <div class="flex justify-center space-x-3">
-                <button onclick="ui.closeUnlock()" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition font-bold w-full">取消</button>
-                <button onclick="noteManager.confirmUnlock()" class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition font-bold w-full">解鎖</button>
+            <h2 class="text-lg font-bold mb-2">筆記加密</h2>
+            <p class="text-xs text-gray-400 mb-5 leading-relaxed px-4">請設定 4-12 位密碼，<br>日後解鎖時需使用。</p>
+            <input type="password" id="new-lock-password" class="w-full p-3 border border-gray-100 bg-gray-50 rounded-xl outline-none text-center tracking-widest mb-6 font-bold" placeholder="設定密碼">
+            <div class="flex gap-3">
+                <button onclick="ui.closeSetPassword()" class="flex-1 py-3 text-gray-500 bg-gray-100 rounded-xl font-bold text-sm">返回</button>
+                <button onclick="noteManager.confirmLock()" class="flex-1 py-3 bg-blue-500 text-white rounded-xl font-bold text-sm shadow-md">確認上鎖</button>
             </div>
         </div>
     </div>
 
-    <!-- 自訂確認對話框 Modal -->
-    <div id="confirm-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-11/12 md:w-80 p-6 text-center">
-            <div id="confirm-icon-bg" class="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i id="confirm-icon" data-lucide="alert-triangle" class="w-6 h-6"></i>
+    <!-- 解鎖 Modal -->
+    <div id="unlock-modal" class="fixed inset-0 bg-black/60 hidden justify-center items-center z-50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[320px] p-6 text-center">
+            <div class="w-14 h-14 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="key" class="w-7 h-7"></i>
             </div>
-            <h2 id="confirm-title" class="text-xl font-bold mb-2">確認</h2>
-            <p id="confirm-desc" class="text-sm text-gray-500 mb-6">您確定要執行此操作嗎？</p>
-            <div class="flex justify-center space-x-3">
-                <button onclick="ui.closeConfirm()" class="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition font-bold w-full">取消</button>
-                <button id="confirm-submit-btn" class="px-4 py-2 text-white rounded transition font-bold w-full">確定</button>
+            <h2 class="text-lg font-bold mb-1">驗證密碼</h2>
+            <p class="text-xs text-gray-400 mb-5">此內容已加密保護</p>
+            <input type="password" id="unlock-password" class="w-full p-3 border border-gray-100 bg-gray-50 rounded-xl outline-none text-center tracking-widest mb-6 font-bold" placeholder="輸入密碼">
+            <div class="flex gap-3">
+                <button onclick="ui.closeUnlock()" class="flex-1 py-3 text-gray-500 bg-gray-100 rounded-xl font-bold text-sm">取消</button>
+                <button onclick="noteManager.confirmUnlock()" class="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold text-sm shadow-md">立即解鎖</button>
             </div>
         </div>
     </div>
 
-    <!-- 通知提示 -->
-    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-5 py-3 rounded-lg shadow-xl transition-opacity duration-300 opacity-0 pointer-events-none z-50 flex items-center whitespace-nowrap">
-        <i id="toast-icon" data-lucide="info" class="w-5 h-5 mr-2"></i>
-        <span id="toast-msg" class="font-medium"></span>
+    <!-- 自訂確認視窗 -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/60 hidden justify-center items-center z-50 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-[320px] p-6 text-center">
+            <div id="confirm-icon-bg" class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i id="confirm-icon" data-lucide="alert-triangle" class="w-7 h-7"></i>
+            </div>
+            <h2 id="confirm-title" class="text-lg font-bold mb-2">確認</h2>
+            <p id="confirm-desc" class="text-xs text-gray-400 mb-6 leading-relaxed">操作確認</p>
+            <div class="flex gap-3">
+                <button onclick="ui.closeConfirm()" class="flex-1 py-3 text-gray-500 bg-gray-100 rounded-xl font-bold text-sm">取消</button>
+                <button id="confirm-submit-btn" class="flex-1 py-3 text-white rounded-xl font-bold text-sm shadow-md">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 (適配所有寬度) -->
+    <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 w-[85%] max-w-[300px] bg-gray-900 text-white px-4 py-3 rounded-2xl shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-[100] flex items-center justify-center text-sm scale-90">
+        <i id="toast-icon" data-lucide="info" class="w-4 h-4 mr-2 shrink-0 text-apple-yellow"></i>
+        <span id="toast-msg" class="font-bold truncate"></span>
     </div>
 
     <script>
-        // --- 核心工具：UTF8 與 Base64 轉換 ---
+        // --- 工具：UTF8/B64 ---
         const b64Tools = {
             encode: (str) => window.btoa(unescape(encodeURIComponent(str))),
             decode: (str) => decodeURIComponent(escape(window.atob(str)))
         };
 
-        // --- 核心邏輯：IndexedDB 本地資料庫 ---
+        // --- 資料庫：IndexedDB ---
         const db = {
-            name: 'PwaNotesDB',
+            name: 'PwaNotesDB_v2',
             version: 1,
             instance: null,
 
             init: function() {
                 return new Promise((resolve, reject) => {
                     const request = indexedDB.open(this.name, this.version);
-                    request.onerror = (event) => reject("資料庫開啟失敗");
-                    request.onsuccess = (event) => {
-                        this.instance = event.target.result;
-                        resolve();
-                    };
-                    request.onupgradeneeded = (event) => {
-                        const database = event.target.result;
+                    request.onerror = () => reject("資料庫開啟失敗");
+                    request.onsuccess = (e) => { this.instance = e.target.result; resolve(); };
+                    request.onupgradeneeded = (e) => {
+                        const database = e.target.result;
                         if (!database.objectStoreNames.contains('notes')) {
                             database.createObjectStore('notes', { keyPath: 'id' });
                         }
@@ -252,40 +261,33 @@
                 });
             },
             
-            saveNotes: function(notesArray) {
-                return new Promise((resolve, reject) => {
+            saveNotes: function(notes) {
+                return new Promise((resolve) => {
                     const transaction = this.instance.transaction(['notes'], 'readwrite');
                     const store = transaction.objectStore('notes');
                     store.clear().onsuccess = () => {
-                        let completed = 0;
-                        if(notesArray.length === 0) resolve();
-                        notesArray.forEach(note => {
-                            const request = store.add(note);
-                            request.onsuccess = () => {
-                                completed++;
-                                if(completed === notesArray.length) resolve();
+                        if (notes.length === 0) return resolve();
+                        let count = 0;
+                        notes.forEach(note => {
+                            store.add(note).onsuccess = () => {
+                                count++;
+                                if (count === notes.length) resolve();
                             };
-                            request.onerror = () => reject("儲存筆記失敗");
                         });
                     };
                 });
             },
 
             getNotes: function() {
-                return new Promise((resolve, reject) => {
-                    const transaction = this.instance.transaction(['notes'], 'readonly');
-                    const store = transaction.objectStore('notes');
+                return new Promise((resolve) => {
+                    const store = this.instance.transaction(['notes'], 'readonly').objectStore('notes');
                     const request = store.getAll();
-                    request.onsuccess = () => {
-                        const notes = request.result.sort((a, b) => b.updatedAt - a.updatedAt);
-                        resolve(notes);
-                    };
-                    request.onerror = () => reject("讀取筆記失敗");
+                    request.onsuccess = () => resolve(request.result.sort((a, b) => b.updatedAt - a.updatedAt));
                 });
             }
         };
 
-        // --- GitHub API 雲端同步模組 ---
+        // --- GitHub 同步核心 ---
         const githubSync = {
             settings: {
                 username: localStorage.getItem('gh_username') || '',
@@ -299,143 +301,83 @@
                 this.settings.username = document.getElementById('set-username').value.trim();
                 this.settings.repo = document.getElementById('set-repo').value.trim();
                 this.settings.token = document.getElementById('set-token').value.trim();
-                
                 localStorage.setItem('gh_username', this.settings.username);
                 localStorage.setItem('gh_repo', this.settings.repo);
                 localStorage.setItem('gh_token', this.settings.token);
-                
                 ui.closeSettings();
                 this.manualSync();
             },
 
-            isReady: function() {
-                return this.settings.username && this.settings.repo && this.settings.token;
-            },
-
-            getApiUrl: function() {
-                return `https://api.github.com/repos/${this.settings.username}/${this.settings.repo}/contents/${this.settings.filePath}`;
-            },
-
-            getHeaders: function() {
-                return {
-                    'Authorization': `token ${this.settings.token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                };
-            },
+            isReady: () => githubSync.settings.username && githubSync.settings.repo && githubSync.settings.token,
+            getApiUrl: () => `https://api.github.com/repos/${githubSync.settings.username}/${githubSync.settings.repo}/contents/${githubSync.settings.filePath}`,
+            getHeaders: () => ({ 'Authorization': `token ${githubSync.settings.token}`, 'Accept': 'application/vnd.github.v3+json' }),
 
             manualSync: async function() {
-                if (!this.isReady()) {
-                    ui.showToast('請先設定 GitHub 資訊', 'settings');
-                    ui.openSettings();
-                    return;
-                }
-
+                if (!this.isReady()) { ui.openSettings(); return; }
                 ui.toggleSyncIcon(true);
                 ui.showToast('正在與 GitHub 同步中...', 'refresh-cw');
-
                 try {
                     const response = await fetch(this.getApiUrl(), { headers: this.getHeaders() });
-                    
                     if (response.ok) {
                         const data = await response.json();
                         this.settings.fileSha = data.sha;
                         localStorage.setItem('gh_file_sha', data.sha);
-                        
-                        const decodedContent = b64Tools.decode(data.content);
-                        const remoteNotes = JSON.parse(decodedContent);
-                        
+                        const remoteNotes = JSON.parse(b64Tools.decode(data.content));
                         await db.saveNotes(remoteNotes);
                         noteManager.notes = remoteNotes;
                         ui.renderNoteList();
-                        ui.showToast('✅ 同步成功：已載入雲端資料', 'check-circle');
-                        
-                        if(noteManager.currentNoteId) {
-                            noteManager.selectNote(noteManager.currentNoteId);
-                        }
-
+                        ui.showToast('✅ 同步成功', 'check-circle');
+                        if (noteManager.currentNoteId) noteManager.selectNote(noteManager.currentNoteId);
                     } else if (response.status === 404) {
-                        ui.showToast('檔案不存在，正在建立雲端保險箱...', 'upload');
+                        ui.showToast('檔案不存在，正在建立雲端備份...', 'upload');
                         const isSuccess = await this.pushToGitHub(true);
-                        if (isSuccess) {
-                            ui.showToast('🎉 雲端備份庫建立成功！', 'check-circle');
-                        } else {
-                            ui.showToast('❌ 建立失敗，請檢查金鑰是否有 repo 權限', 'alert-circle');
-                        }
-                    } else if (response.status === 401) {
-                        ui.showToast('❌ 金鑰 (Token) 無效或已過期', 'alert-circle');
+                        if (isSuccess) ui.showToast('🎉 雲端備份建立成功', 'check-circle');
                     } else {
-                        throw new Error(`API 錯誤: ${response.status}`);
+                        ui.showToast('❌ 金鑰無效或網路錯誤', 'alert-circle');
                     }
-                } catch (error) {
-                    console.error(error);
-                    ui.showToast('❌ 網路連線錯誤或設定異常', 'wifi-off');
-                } finally {
-                    ui.toggleSyncIcon(false);
-                }
+                } catch (e) { ui.showToast('❌ 同步失敗', 'wifi-off'); }
+                finally { ui.toggleSyncIcon(false); }
             },
 
-            pushToGitHub: async function(isInit = false) {
+            pushToGitHub: async function() {
                 if (!this.isReady()) return false;
-                
                 try {
                     const notes = await db.getNotes();
-                    const contentJson = JSON.stringify(notes);
-                    const encodedContent = b64Tools.encode(contentJson);
-                    
-                    const payload = {
-                        message: `自動同步備忘錄: ${new Date().toLocaleString()}`,
-                        content: encodedContent
-                    };
-                    
-                    if (this.settings.fileSha) {
-                        payload.sha = this.settings.fileSha;
-                    }
-
-                    const response = await fetch(this.getApiUrl(), {
-                        method: 'PUT',
-                        headers: this.getHeaders(),
-                        body: JSON.stringify(payload)
-                    });
-
+                    const encodedContent = b64Tools.encode(JSON.stringify(notes));
+                    const payload = { message: `Auto sync: ${new Date().toLocaleString()}`, content: encodedContent };
+                    if (this.settings.fileSha) payload.sha = this.settings.fileSha;
+                    const response = await fetch(this.getApiUrl(), { method: 'PUT', headers: this.getHeaders(), body: JSON.stringify(payload) });
                     if (response.ok || response.status === 201) {
                         const data = await response.json();
                         this.settings.fileSha = data.content.sha;
                         localStorage.setItem('gh_file_sha', data.content.sha);
-                        console.log("GitHub 備份更新成功");
                         return true;
-                    } else {
-                        console.error("上傳至 GitHub 失敗", await response.text());
-                        return false;
                     }
-                } catch (error) {
-                    console.error("Push 執行異常", error);
                     return false;
-                }
+                } catch (e) { return false; }
             }
         };
 
-        // --- 應用程式與筆記管理邏輯 ---
+        // --- 筆記管理核心 ---
         const noteManager = {
             notes: [],
             currentNoteId: null,
             quill: null,
             autoSaveTimer: null,
             syncTimer: null,
-            unlockedSession: new Set(), // 記錄本次開啟期間已解鎖的筆記 ID
-            pendingUnlockId: null,      // 記錄正在等待解鎖的筆記 ID
+            unlockedSession: new Set(),
+            pendingUnlockId: null,
 
             init: async function() {
                 this.quill = new Quill('#quill-editor', {
                     theme: 'snow',
-                    placeholder: '開始記錄靈感...',
+                    placeholder: '寫下您的想法...',
                     modules: {
                         toolbar: [
                             [{ 'header': [1, 2, 3, false] }],
-                            ['bold', 'italic', 'underline', 'strike'],
-                            [{ 'color': [] }, { 'background': [] }],
+                            ['bold', 'italic', 'underline'],
                             [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
-                            ['link', 'image'],
-                            ['clean']
+                            ['link', 'image', 'clean']
                         ]
                     }
                 });
@@ -447,27 +389,14 @@
                 this.notes = await db.getNotes();
                 ui.renderNoteList();
 
-                if (this.notes.length > 0) {
-                    this.selectNote(this.notes[0].id);
-                } else {
-                    ui.showSidebar();
-                }
+                if (this.notes.length > 0) this.selectNote(this.notes[0].id);
+                else ui.showSidebar();
                 
-                if(githubSync.isReady()) {
-                    githubSync.manualSync();
-                }
+                if (githubSync.isReady()) githubSync.manualSync();
             },
 
             createNewNote: function() {
-                const newNote = {
-                    id: Date.now().toString(),
-                    title: '',
-                    content: '', 
-                    preview: '無額外文字',
-                    updatedAt: Date.now(),
-                    isLocked: false,
-                    lockPassword: ''
-                };
+                const newNote = { id: Date.now().toString(), title: '', content: '', preview: '新筆記', updatedAt: Date.now(), isLocked: false, lockPassword: '' };
                 this.notes.unshift(newNote);
                 this.unlockedSession.add(newNote.id);
                 this.selectNote(newNote.id);
@@ -477,16 +406,12 @@
             selectNote: function(id) {
                 const note = this.notes.find(n => n.id === id);
                 if (!note) return;
-
-                // 檢查是否上鎖且未在本次 session 中解鎖
                 if (note.isLocked && !this.unlockedSession.has(id)) {
                     this.pendingUnlockId = id;
                     document.getElementById('unlock-password').value = '';
-                    document.getElementById('unlock-modal').classList.remove('hidden');
-                    document.getElementById('unlock-modal').classList.add('flex');
+                    ui.showModal('unlock-modal');
                     return;
                 }
-
                 this.currentNoteId = id;
                 document.getElementById('note-title').value = note.title;
                 this.quill.clipboard.dangerouslyPasteHTML(note.content);
@@ -496,221 +421,140 @@
             },
 
             deleteCurrentNote: function() {
-                if (!this.currentNoteId) {
-                    ui.showToast('請先選擇要刪除的筆記', 'alert-circle');
-                    return;
-                }
-
-                ui.showConfirm(
-                    '刪除筆記',
-                    '確定要刪除這則備忘錄嗎？此動作無法復原。',
-                    'trash-2',
-                    'bg-red-100 text-red-600',
-                    'bg-red-500 hover:bg-red-600',
-                    () => {
-                        this.notes = this.notes.filter(n => n.id !== this.currentNoteId);
-                        this.currentNoteId = null;
-                        
-                        document.getElementById('note-title').value = '';
-                        this.quill.setText('');
-                        
-                        this.triggerAutoSave();
-                        
-                        if (this.notes.length > 0) {
-                            this.selectNote(this.notes[0].id);
-                        } else {
-                            ui.showSidebar();
-                        }
-                    }
-                );
+                if (!this.currentNoteId) return ui.showToast('請先選擇筆記', 'alert-circle');
+                ui.showConfirm('刪除備忘', '確定要刪除嗎？此動作無法復原。', 'trash-2', 'bg-red-50 text-red-500', 'bg-red-500 hover:bg-red-600', () => {
+                    this.notes = this.notes.filter(n => n.id !== this.currentNoteId);
+                    this.currentNoteId = null;
+                    document.getElementById('note-title').value = '';
+                    this.quill.setText('');
+                    this.triggerAutoSave();
+                    if (this.notes.length > 0) this.selectNote(this.notes[0].id);
+                    else ui.showSidebar();
+                });
             },
 
-            // 切換鎖定狀態
             toggleLock: function() {
-                if (!this.currentNoteId) {
-                    ui.showToast('請先新增一則筆記才能設定密碼', 'alert-circle');
-                    return;
-                }
+                if (!this.currentNoteId) return ui.showToast('請先新增筆記', 'alert-circle');
                 const note = this.notes.find(n => n.id === this.currentNoteId);
-                
                 if (note.isLocked) {
-                    ui.showConfirm(
-                        '解除鎖定',
-                        '確定要永久解除此筆記的密碼鎖定嗎？',
-                        'unlock',
-                        'bg-blue-100 text-blue-600',
-                        'bg-blue-600 hover:bg-blue-700',
-                        () => {
-                            note.isLocked = false;
-                            note.lockPassword = '';
-                            this.triggerAutoSave();
-                            ui.updateLockIcon(false);
-                            ui.renderNoteList();
-                            ui.showToast('🔓 筆記已解除鎖定', 'unlock');
-                        }
-                    );
+                    ui.showConfirm('解除加密', '確定要解除密碼保護嗎？', 'unlock', 'bg-blue-50 text-blue-500', 'bg-blue-500 hover:bg-blue-600', () => {
+                        note.isLocked = false;
+                        note.lockPassword = '';
+                        this.triggerAutoSave();
+                        ui.updateLockIcon(false);
+                        ui.renderNoteList();
+                        ui.showToast('🔓 密碼已解除', 'unlock');
+                    });
                 } else {
                     document.getElementById('new-lock-password').value = '';
-                    document.getElementById('set-password-modal').classList.remove('hidden');
-                    document.getElementById('set-password-modal').classList.add('flex');
+                    ui.showModal('set-password-modal');
                 }
             },
 
-            // 確認設定密碼並上鎖
-            confirmLock: async function() {
-                if (!this.currentNoteId) return;
+            confirmLock: function() {
                 const pwd = document.getElementById('new-lock-password').value.trim();
-                if (!pwd) {
-                    ui.showToast('密碼不能為空', 'alert-circle');
-                    return;
-                }
+                if (!pwd) return ui.showToast('密碼不能為空', 'alert-circle');
                 const note = this.notes.find(n => n.id === this.currentNoteId);
                 note.isLocked = true;
                 note.lockPassword = pwd;
-                
-                ui.closeSetPassword();
+                ui.hideModal('set-password-modal');
                 this.triggerAutoSave();
                 ui.updateLockIcon(true);
                 ui.renderNoteList();
-                ui.showToast('🔒 筆記已成功上鎖', 'lock');
+                ui.showToast('🔒 已加密', 'lock');
             },
 
-            // 確認解鎖
             confirmUnlock: function() {
-                if (!this.pendingUnlockId) return;
                 const note = this.notes.find(n => n.id === this.pendingUnlockId);
-                const inputPwd = document.getElementById('unlock-password').value;
-
-                if (note.lockPassword === inputPwd) {
-                    this.unlockedSession.add(note.id); // 記錄為已解鎖
-                    ui.closeUnlock();
-                    this.selectNote(note.id); // 重新載入內容
-                    ui.showToast('✅ 解鎖成功', 'unlock');
-                } else {
-                    ui.showToast('❌ 密碼錯誤', 'alert-circle');
-                }
+                if (note.lockPassword === document.getElementById('unlock-password').value) {
+                    this.unlockedSession.add(note.id);
+                    ui.hideModal('unlock-modal');
+                    this.selectNote(note.id);
+                    ui.showToast('✅ 驗證成功', 'unlock');
+                } else { ui.showToast('❌ 密碼錯誤', 'alert-circle'); }
             },
 
-            // 手動即刻儲存並上傳雲端
             manualImmediateSync: async function() {
                 if (!this.currentNoteId) return;
-
                 clearTimeout(this.autoSaveTimer);
                 clearTimeout(this.syncTimer);
-
                 const note = this.notes.find(n => n.id === this.currentNoteId);
                 if (note) {
                     note.title = document.getElementById('note-title').value;
                     note.content = this.quill.root.innerHTML;
-                    note.preview = this.quill.getText().substring(0, 50).replace(/\n/g, ' ') || '無額外文字';
+                    note.preview = this.quill.getText().substring(0, 50).replace(/\n/g, ' ') || '新筆記';
                     note.updatedAt = Date.now();
-
                     this.notes.sort((a, b) => b.updatedAt - a.updatedAt);
-                    
                     await db.saveNotes(this.notes);
                     ui.renderNoteList();
-
                     if (githubSync.isReady()) {
-                        ui.showToast('🚀 正在立即上傳至雲端...', 'cloud-upload');
+                        ui.showToast('🚀 即刻同步雲端...', 'cloud-upload');
                         ui.toggleSyncIcon(true);
-                        
-                        const isSuccess = await githubSync.pushToGitHub();
-                        
+                        const ok = await githubSync.pushToGitHub();
                         ui.toggleSyncIcon(false);
-                        if (isSuccess) {
-                            ui.showToast('✅ 雲端上傳完成！', 'check-circle');
-                        } else {
-                            ui.showToast('❌ 上傳失敗，請檢查網路連線', 'alert-circle');
-                        }
-                    } else {
-                        ui.showToast('✅ 本地儲存完成 (尚未設定雲端)', 'check-circle');
-                    }
+                        ui.showToast(ok ? '✅ 已同步至雲端' : '❌ 同步異常', ok ? 'check-circle' : 'alert-circle');
+                    } else { ui.showToast('✅ 已儲存至本地', 'check-circle'); }
                 }
             },
 
             triggerAutoSave: function() {
                 if (!this.currentNoteId) return;
-
                 clearTimeout(this.autoSaveTimer);
                 this.autoSaveTimer = setTimeout(async () => {
                     const note = this.notes.find(n => n.id === this.currentNoteId);
                     if (note) {
                         note.title = document.getElementById('note-title').value;
                         note.content = this.quill.root.innerHTML;
-                        note.preview = this.quill.getText().substring(0, 50).replace(/\n/g, ' ') || '無額外文字';
+                        note.preview = this.quill.getText().substring(0, 50).replace(/\n/g, ' ') || '新筆記';
                         note.updatedAt = Date.now();
-
                         this.notes.sort((a, b) => b.updatedAt - a.updatedAt);
-                        
                         await db.saveNotes(this.notes);
                         ui.renderNoteList();
                         ui.showSaveStatus();
-
-                        this.triggerBackgroundSync();
+                        if (githubSync.isReady()) {
+                            clearTimeout(this.syncTimer);
+                            this.syncTimer = setTimeout(() => githubSync.pushToGitHub(), 5000);
+                        }
                     }
                 }, 1000);
-            },
-
-            triggerBackgroundSync: function() {
-                if (!githubSync.isReady()) return;
-                
-                clearTimeout(this.syncTimer);
-                this.syncTimer = setTimeout(() => {
-                    githubSync.pushToGitHub();
-                }, 4000); 
             }
         };
 
-        // --- UI 控制與渲染邏輯 ---
+        // --- UI 控制 ---
         const ui = {
-            formatDate: function(timestamp) {
-                const d = new Date(timestamp);
-                const now = new Date();
-                if (d.toDateString() === now.toDateString()) {
-                    return d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
-                }
-                return d.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' });
-            },
-
             renderNoteList: function() {
-                const listEl = document.getElementById('note-list');
-                listEl.innerHTML = '';
-
+                const list = document.getElementById('note-list');
+                list.innerHTML = '';
                 if (noteManager.notes.length === 0) {
-                    listEl.innerHTML = '<div class="p-6 text-center text-gray-500 font-bold text-sm">點擊右上角新增第一則筆記</div>';
+                    list.innerHTML = '<div class="p-8 text-center text-gray-400 font-bold text-xs">尚無備忘錄</div>';
                     return;
                 }
-
                 noteManager.notes.forEach(note => {
-                    const isActive = note.id === noteManager.currentNoteId;
+                    const active = note.id === noteManager.currentNoteId;
+                    const isHidden = note.isLocked && !noteManager.unlockedSession.has(note.id);
                     const div = document.createElement('div');
-                    div.className = `p-4 border-b border-white/30 cursor-pointer transition ${isActive ? 'note-active' : 'hover:bg-white/40'}`;
+                    div.className = `p-4 border-b border-white/20 cursor-pointer transition-all ${active ? 'note-active' : 'hover:bg-white/30'}`;
                     div.onclick = () => noteManager.selectNote(note.id);
-                    
-                    const displayTitle = note.title.trim() || '新增備忘錄';
-                    const lockIconHtml = note.isLocked ? `<i data-lucide="lock" class="w-3 h-3 text-red-400 ml-1 inline"></i>` : '';
-                    const isLockedAndHidden = note.isLocked && !noteManager.unlockedSession.has(note.id);
-                    
                     div.innerHTML = `
-                        <div class="font-bold text-md text-gray-800 truncate mb-1 flex items-center">
-                            ${displayTitle} ${lockIconHtml}
+                        <div class="font-bold text-sm text-gray-800 truncate mb-1 flex items-center gap-1">
+                            ${note.title.trim() || '未命名'} ${note.isLocked ? '<i data-lucide="lock" class="w-3 h-3 text-red-500"></i>' : ''}
                         </div>
-                        <div class="flex items-center text-xs text-gray-600">
-                            <span class="mr-2 shrink-0 font-bold">${this.formatDate(note.updatedAt)}</span>
-                            <span class="truncate">${isLockedAndHidden ? '已上鎖的內容' : note.preview}</span>
+                        <div class="text-[10px] text-gray-500 flex justify-between items-center">
+                            <span class="truncate pr-4">${isHidden ? '🔒 內容已加密' : note.preview}</span>
+                            <span class="shrink-0 font-mono">${new Date(note.updatedAt).toLocaleDateString()}</span>
                         </div>
                     `;
-                    listEl.appendChild(div);
+                    list.appendChild(div);
                 });
+                lucide.createIcons();
             },
 
-            showSidebar: function() {
+            showSidebar: () => {
                 document.getElementById('sidebar').classList.remove('hidden');
                 document.getElementById('editor-container').classList.add('hidden');
-                document.getElementById('editor-container').classList.remove('flex');
             },
 
-            showEditor: function() {
+            showEditor: () => {
                 if (window.innerWidth < 768) {
                     document.getElementById('sidebar').classList.add('hidden');
                     document.getElementById('editor-container').classList.remove('hidden');
@@ -718,149 +562,84 @@
                 }
             },
 
-            // 升級：打開設定時強制套用密碼遮蔽狀態
-            openSettings: function() {
+            showModal: (id) => { document.getElementById(id).classList.remove('hidden'); document.getElementById(id).classList.add('flex'); },
+            hideModal: (id) => { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); },
+            openSettings: () => {
                 document.getElementById('set-username').value = githubSync.settings.username;
                 document.getElementById('set-repo').value = githubSync.settings.repo;
                 document.getElementById('set-token').value = githubSync.settings.token;
-                
-                // 強制重置三個欄位為隱藏模式
-                const fields = [
-                    { inputId: 'set-username', btnId: 'btn-eye-username' },
-                    { inputId: 'set-repo', btnId: 'btn-eye-repo' },
-                    { inputId: 'set-token', btnId: 'btn-eye-token' }
-                ];
-                
-                fields.forEach(field => {
-                    document.getElementById(field.inputId).type = 'password';
-                    document.getElementById(field.btnId).innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
-                });
-                lucide.createIcons();
-
-                document.getElementById('settings-modal').classList.remove('hidden');
-                document.getElementById('settings-modal').classList.add('flex');
+                ui.showModal('settings-modal');
             },
+            closeSettings: () => ui.hideModal('settings-modal'),
+            closeSetPassword: () => ui.hideModal('set-password-modal'),
+            closeUnlock: () => ui.hideModal('unlock-modal'),
+            closeConfirm: () => ui.hideModal('confirm-modal'),
 
-            // 新增：切換顯示/隱藏敏感資訊
-            toggleVisibility: function(inputId, btnId) {
+            toggleVisibility: (inputId, btnId) => {
                 const input = document.getElementById(inputId);
                 const btn = document.getElementById(btnId);
-                
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    btn.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
-                } else {
-                    input.type = 'password';
-                    btn.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
-                }
+                input.type = input.type === 'password' ? 'text' : 'password';
+                btn.innerHTML = `<i data-lucide="${input.type === 'password' ? 'eye-off' : 'eye'}" class="w-5 h-5"></i>`;
                 lucide.createIcons();
             },
 
-            closeSettings: function() {
-                document.getElementById('settings-modal').classList.add('hidden');
-                document.getElementById('settings-modal').classList.remove('flex');
-            },
-
-            updateLockIcon: function(isLocked) {
-                const desktopBtn = document.getElementById('desktop-lock-btn');
-                const mobileBtn = document.getElementById('mobile-lock-btn');
-                
-                const updateBtn = (btn) => {
-                    if(!btn) return;
-                    if (isLocked) {
-                        btn.innerHTML = '<i data-lucide="lock" class="w-5 h-5"></i>';
-                        btn.classList.add('text-blue-600');
-                        btn.classList.remove('text-gray-400');
-                    } else {
-                        btn.innerHTML = '<i data-lucide="unlock" class="w-5 h-5"></i>';
-                        btn.classList.add('text-gray-400');
-                        btn.classList.remove('text-blue-600');
-                    }
-                };
-                updateBtn(desktopBtn);
-                updateBtn(mobileBtn);
+            updateLockIcon: (locked) => {
+                const btns = [document.getElementById('desktop-lock-btn'), document.getElementById('mobile-lock-btn')];
+                btns.forEach(btn => {
+                    if (!btn) return;
+                    btn.innerHTML = `<i data-lucide="${locked ? 'lock' : 'unlock'}" class="w-5 h-5"></i>`;
+                    btn.classList.toggle('text-blue-500', locked);
+                    btn.classList.toggle('text-gray-400', !locked);
+                });
                 lucide.createIcons();
             },
 
-            closeSetPassword: function() {
-                document.getElementById('set-password-modal').classList.add('hidden');
-                document.getElementById('set-password-modal').classList.remove('flex');
-            },
-
-            closeUnlock: function() {
-                document.getElementById('unlock-modal').classList.add('hidden');
-                document.getElementById('unlock-modal').classList.remove('flex');
-                noteManager.pendingUnlockId = null;
-            },
-
-            showConfirm: function(title, desc, iconName, iconBgClass, btnClass, onConfirmCallback) {
+            showConfirm: (title, desc, icon, iconBg, btnClass, callback) => {
                 document.getElementById('confirm-title').textContent = title;
                 document.getElementById('confirm-desc').textContent = desc;
-                
-                const iconBg = document.getElementById('confirm-icon-bg');
-                iconBg.className = `w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${iconBgClass}`;
-                
-                const iconEl = document.getElementById('confirm-icon');
-                iconEl.setAttribute('data-lucide', iconName);
+                document.getElementById('confirm-icon-bg').className = `w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 ${iconBg}`;
+                document.getElementById('confirm-icon').setAttribute('data-lucide', icon);
+                const subBtn = document.getElementById('confirm-submit-btn');
+                subBtn.className = `flex-1 py-3 text-white rounded-xl font-bold text-sm shadow-md ${btnClass}`;
+                subBtn.onclick = () => { ui.closeConfirm(); callback(); };
+                ui.showModal('confirm-modal');
                 lucide.createIcons();
-                
-                const submitBtn = document.getElementById('confirm-submit-btn');
-                submitBtn.className = `px-4 py-2 text-white rounded transition font-bold w-full ${btnClass}`;
-                
-                submitBtn.onclick = () => {
-                    ui.closeConfirm();
-                    if(onConfirmCallback) onConfirmCallback();
-                };
-                
-                const modal = document.getElementById('confirm-modal');
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
             },
 
-            closeConfirm: function() {
-                const modal = document.getElementById('confirm-modal');
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            },
-
-            showToast: function(msg, iconName = 'info') {
+            showToast: (msg, icon) => {
                 const toast = document.getElementById('toast');
                 document.getElementById('toast-msg').textContent = msg;
-                document.getElementById('toast-icon').setAttribute('data-lucide', iconName);
+                document.getElementById('toast-icon').setAttribute('data-lucide', icon);
                 lucide.createIcons();
-                
-                toast.classList.remove('opacity-0');
-                setTimeout(() => toast.classList.add('opacity-0'), 3500);
+                toast.classList.remove('opacity-0', 'scale-90');
+                toast.classList.add('opacity-100', 'scale-100');
+                setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'scale-100');
+                    toast.classList.add('opacity-0', 'scale-90');
+                }, 3000);
             },
 
-            showSaveStatus: function() {
-                const status = document.getElementById('save-status');
-                status.classList.remove('opacity-0');
-                setTimeout(() => status.classList.add('opacity-0'), 2000);
+            showSaveStatus: () => {
+                const el = document.getElementById('save-status');
+                el.classList.remove('opacity-0');
+                setTimeout(() => el.classList.add('opacity-0'), 2000);
             },
 
-            toggleSyncIcon: function(isSyncing) {
+            toggleSyncIcon: (syncing) => {
                 const btn = document.getElementById('sync-btn');
-                if (isSyncing) {
-                    btn.classList.add('animate-spin', 'text-blue-500');
-                } else {
-                    btn.classList.remove('animate-spin', 'text-blue-500');
-                }
+                btn.classList.toggle('animate-spin', syncing);
+                btn.classList.toggle('text-blue-500', syncing);
             }
         };
 
-        // PWA 啟動與實體 Service Worker 註冊
+        // --- 初始化 ---
         window.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             noteManager.init();
-            
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js')
-                    .then(() => console.log("實體 Service Worker 註冊成功"))
-                    .catch((error) => console.log("SW 註冊失敗/略過:", error));
+                navigator.serviceWorker.register('sw.js').catch(() => {});
             }
         });
-
     </script>
 </body>
 </html>
