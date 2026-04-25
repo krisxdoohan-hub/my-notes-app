@@ -1,5 +1,5 @@
 // 1. 定義對應主程式的版本號，每次更新 HTML 時，這裡也要跟著改以強制刷新快取
-const CACHE_NAME = 'pwa-notes-cache-v1.5.0';
+const CACHE_NAME = 'pwa-notes-cache-v1.5.2';
 
 // 2. 羅列所有需要離線暫存的靜態資源 (包含外部的 CSS 與 JS 庫)
 const urlsToCache = [
